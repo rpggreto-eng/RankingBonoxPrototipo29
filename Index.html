@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Ranking</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#111118; --card:#16161f; --border:#252535;
+    --accent:#f0c040; --accent2:#e05555; --text:#e8e8f0; --muted:#6b6b88;
+    --green:#40c070; --blue:#4090f0;
+    --mono:'DM Mono',monospace; --head:'Bebas Neue',sans-serif; --body:'Syne',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  /* AUTH */
+  #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse 80% 60% at 50% 0%,#1a1a2e 0%,#0a0a0f 70%);padding:20px;}
+  .auth-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:100%;max-width:460px;box-shadow:0 0 80px rgba(240,192,64,0.06);}
+  .auth-logo{font-family:var(--head);font-size:52px;color:var(--accent);letter-spacing:3px;margin-bottom:4px;}
+  .auth-sub{color:var(--muted);font-size:13px;margin-bottom:36px;font-family:var(--mono);}
+  .tabs{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:28px;}
+  .tab{flex:1;padding:8px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;transition:.2s;color:var(--muted);border:none;background:transparent;}
+  .tab.active{background:var(--accent);color:#000;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
+  .field input,.field select,.field textarea{width:100%;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;transition:.2s;}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(240,192,64,0.08);}
+  .field select option{background:var(--surface);}
+  .btn-primary{width:100%;padding:14px;background:var(--accent);color:#000;font-weight:800;font-size:15px;border:none;border-radius:8px;cursor:pointer;transition:.15s;font-family:var(--body);letter-spacing:.5px;margin-top:8px;}
+  .btn-primary:hover{background:#f5d060;transform:translateY(-1px);}
+  .err-msg{background:rgba(224,85,85,0.12);border:1px solid rgba(224,85,85,0.3);color:var(--accent2);padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;display:none;font-family:var(--mono);}
+  .note{font-size:11px;color:var(--muted);margin-top:12px;text-align:center;font-family:var(--mono);}
+
+  /* TOPBAR */
+  #app{display:none;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;height:60px;gap:10px;position:sticky;top:0;z-index:100;}
+  .logo{font-family:var(--head);font-size:26px;color:var(--accent);letter-spacing:2px;flex-shrink:0;}
+  .nav-links{display:flex;gap:2px;flex:1;overflow-x:auto;}
+  .nav-btn{padding:5px 11px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:var(--body);font-weight:700;font-size:12px;transition:.15s;white-space:nowrap;flex-shrink:0;}
+  .nav-btn.active{background:var(--border);color:var(--text);}
+  .nav-btn:hover:not(.active){color:var(--text);}
+  .user-pill{background:var(--border);border-radius:20px;padding:5px 11px;font-size:11px;font-family:var(--mono);color:var(--muted);white-space:nowrap;flex-shrink:0;}
+  .user-pill span{color:var(--accent);}
+  .btn-logout{padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:.15s;flex-shrink:0;}
+  .btn-logout:hover{border-color:var(--accent2);color:var(--accent2);}
+
+  /* NOTIF */
+  .notif-btn{position:relative;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:15px;transition:.15s;flex-shrink:0;}
+  .notif-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .notif-badge{position:absolute;top:-5px;right:-5px;background:var(--accent2);color:#fff;font-size:9px;font-family:var(--mono);font-weight:700;border-radius:10px;padding:1px 4px;display:none;}
+  .notif-badge.show{display:block;}
+  .notif-panel{position:fixed;top:68px;right:12px;width:320px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.6);z-index:200;display:none;max-height:400px;flex-direction:column;}
+  .notif-panel.open{display:flex;}
+  .notif-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .notif-header span{font-family:var(--head);font-size:17px;color:var(--accent);letter-spacing:1px;}
+  .notif-mark{font-size:11px;font-family:var(--mono);color:var(--muted);cursor:pointer;background:none;border:none;}
+  .notif-mark:hover{color:var(--text);}
+  .notif-list{overflow-y:auto;flex:1;}
+  .notif-item{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .notif-item.unread{background:rgba(240,192,64,0.05);border-left:3px solid var(--accent);}
+  .notif-item .ni-title{font-size:12px;font-weight:700;margin-bottom:2px;}
+  .notif-item .ni-sub{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .notif-empty{padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;}
+
+  /* PAGES */
+  .page{display:none;padding:24px 20px;max-width:1140px;margin:0 auto;}
+  .page.active{display:block;}
+  .page-title{font-family:var(--head);font-size:40px;color:var(--accent);letter-spacing:2px;margin-bottom:4px;}
+  .page-desc{color:var(--muted);font-size:12px;font-family:var(--mono);margin-bottom:20px;}
+
+  /* RANKING */
+  .search-bar{display:flex;gap:10px;margin-bottom:14px;}
+  .search-bar input{flex:1;padding:9px 13px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:.2s;}
+  .search-bar input:focus{border-color:var(--accent);}
+  .season-pill{background:rgba(64,144,240,0.12);border:1px solid rgba(64,144,240,0.3);color:var(--blue);font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px;margin-bottom:14px;display:inline-block;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;}
+  tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:.15s;}
+  tbody tr:hover{background:rgba(240,192,64,0.03);}
+  tbody td{padding:11px 12px;font-size:13px;font-family:var(--mono);}
+  .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;font-weight:700;font-size:12px;}
+  .rank-1{background:linear-gradient(135deg,#f0c040,#e08020);color:#000;}
+  .rank-2{background:linear-gradient(135deg,#c0c8d8,#8090a8);color:#000;}
+  .rank-3{background:linear-gradient(135deg,#d08040,#a05020);color:#fff;}
+  .rank-n{background:var(--border);color:var(--muted);}
+  .pts{color:var(--accent);font-weight:500;}
+  .discord-tag{color:var(--muted);font-size:11px;}
+  .badge-admin{background:rgba(224,85,85,0.15);color:var(--accent2);font-size:9px;padding:2px 5px;border-radius:4px;font-family:var(--mono);}
+
+  /* LAYOUT */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:720px){.two-col{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;}
+  .card h3{font-family:var(--head);font-size:21px;color:var(--accent);margin-bottom:14px;letter-spacing:1px;}
+  .card-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .card-title-row h3{margin-bottom:0;}
+
+  /* ADMIN */
+  .search-results{margin-top:6px;max-height:200px;overflow-y:auto;}
+  .result-item{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:var(--surface);border-radius:7px;margin-bottom:4px;cursor:pointer;border:1px solid transparent;transition:.15s;}
+  .result-item:hover,.result-item.selected{border-color:var(--accent);}
+  .result-name{font-weight:700;font-size:13px;}
+  .result-pts{color:var(--accent);font-family:var(--mono);font-size:12px;}
+  .pts-section{margin-top:12px;display:none;}
+  .pts-section.show{display:block;}
+  .sel-user-card{background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.2);border-radius:8px;padding:11px 14px;margin-bottom:10px;}
+  .sel-user-card .sname{font-weight:800;font-size:14px;}
+  .sel-user-card .sinfo{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+  .sel-user-card .spts{font-family:var(--head);font-size:28px;color:var(--accent);}
+  .btn-row{display:flex;gap:8px;}
+  .btn-add{flex:1;padding:10px;background:var(--green);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-family:var(--body);transition:.15s;font-size:13px;}
+  .btn-add:hover{filter:brightness(1.1);}
+  .btn-sub{flex:1;padding:10px;background:var(--accent2);color:#fff;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-family:var(--body);transition:.15s;font-size:13px;}
+  .btn-sub:hover{filter:brightness(1.1);}
+  .log-list{max-height:360px;overflow-y:auto;}
+  .log-item{padding:9px 11px;background:var(--surface);border-radius:7px;margin-bottom:4px;font-family:var(--mono);font-size:12px;}
+  .log-plus{color:var(--green);}
+  .log-minus{color:var(--accent2);}
+
+  /* EVENTS */
+  .event-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:8px;transition:.15s;}
+  .event-card:hover{border-color:rgba(240,192,64,0.4);}
+  .event-card.active-evt{border-color:rgba(64,192,112,0.5);}
+  .evt-name{font-weight:800;font-size:13px;margin-bottom:3px;}
+  .evt-meta{font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .evt-game{display:inline-block;background:rgba(64,144,240,0.12);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono);margin-top:3px;}
+  .evt-open{color:var(--green);font-size:10px;font-family:var(--mono);}
+  .evt-closed{color:var(--muted);font-size:10px;font-family:var(--mono);}
+
+  /* MASS */
+  .mass-row{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--surface);border-radius:7px;margin-bottom:4px;}
+  .mass-pos{font-family:var(--head);font-size:17px;color:var(--muted);width:28px;flex-shrink:0;}
+  .mass-name{flex:1;font-size:13px;font-weight:700;}
+  .mass-pts-badge{font-family:var(--mono);font-size:13px;font-weight:700;}
+  .rank-gold .mass-pts-badge{color:#f0c040;}
+  .rank-silver .mass-pts-badge{color:#c0c8d8;}
+  .rank-bronze .mass-pts-badge{color:#d08040;}
+  .mass-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;}
+  .mass-remove:hover{color:var(--accent2);}
+  .mass-search-wrap{position:relative;margin-bottom:8px;}
+  .mass-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:10;max-height:180px;overflow-y:auto;display:none;}
+  .mass-dropdown.open{display:block;}
+  .mass-drop-item{padding:8px 12px;cursor:pointer;font-size:13px;font-family:var(--mono);border-bottom:1px solid rgba(255,255,255,0.04);transition:.1s;}
+  .mass-drop-item:hover{background:var(--surface);}
+
+  /* SEASONS */
+  .season-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:7px;}
+  .season-name{font-weight:800;font-size:13px;}
+  .season-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+  .season-current{border-color:rgba(64,192,112,0.5);}
+  .badge-current{background:rgba(64,192,112,0.15);color:var(--green);font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono);}
+
+  /* PROFILE */
+  .profile-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:540px;}
+  .profile-name{font-family:var(--head);font-size:40px;color:var(--text);letter-spacing:2px;}
+  .profile-discord{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:3px;}
+  .profile-pts-big{font-family:var(--head);font-size:72px;color:var(--accent);line-height:1;margin:14px 0 3px;}
+  .profile-rank-txt{font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .profile-rank-pos{font-family:var(--head);font-size:24px;color:var(--text);}
+  .pts-scale{margin-top:20px;border-top:1px solid var(--border);padding-top:16px;}
+  .pts-scale h4{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+  .scale-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .scale-pos{color:var(--muted);}
+  .scale-pts{color:var(--accent);}
+
+  /* USERS */
+  .user-table-wrapper{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .btn-danger{padding:4px 9px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);border-radius:5px;cursor:pointer;font-size:10px;font-family:var(--mono);transition:.15s;}
+  .btn-danger:hover{background:rgba(224,85,85,0.15);}
+  .btn-sm{padding:4px 9px;background:var(--border);border:none;color:var(--text);border-radius:5px;cursor:pointer;font-size:10px;font-family:var(--mono);}
+
+  /* MISC */
+  .no-results{text-align:center;padding:20px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+  .btn-icon{padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--mono);transition:.15s;white-space:nowrap;}
+  .btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-green{padding:10px 16px;background:var(--green);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-family:var(--body);font-size:13px;transition:.15s;}
+  .btn-green:hover{filter:brightness(1.1);}
+  .divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+  .warn-box{background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.25);border-radius:8px;padding:11px;margin-bottom:12px;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.6;}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border);padding:11px 16px;border-radius:10px;font-family:var(--mono);font-size:12px;z-index:999;transform:translateY(100px);opacity:0;transition:.3s;pointer-events:none;max-width:300px;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .toast.success{border-color:var(--green);color:var(--green);}
+  .toast.error{border-color:var(--accent2);color:var(--accent2);}
+  .toast.info{border-color:var(--blue);color:var(--blue);}
+  ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:440px;}
+  .modal-box h3{font-family:var(--head);font-size:24px;color:var(--accent);letter-spacing:1px;margin-bottom:16px;}
+  .modal-close{float:right;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;margin-top:-4px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH ═══════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">RANKING</div>
+    <div class="auth-sub">// sistema de puntos competitivo</div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Iniciar Sesión</button>
+      <button class="tab" onclick="switchTab('register')">Crear Cuenta</button>
+    </div>
+    <div id="tab-login">
+      <div class="field"><label>ID de usuario</label><input type="text" id="l-id" placeholder="tu_id_unico"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="doLogin()">ENTRAR</button>
+      <div class="err-msg" id="l-err"></div>
+    </div>
+    <div id="tab-register" style="display:none">
+      <div class="field"><label>ID único *</label><input type="text" id="r-id" placeholder="sin espacios, ej: gamer_99"></div>
+      <div class="field"><label>Nombre para mostrar *</label><input type="text" id="r-name" placeholder="Tu nombre en el ranking"></div>
+      <div class="field"><label>Discord * (usuario#0000 o @usuario)</label><input type="text" id="r-discord" placeholder="usuario#1234"></div>
+      <div class="field"><label>Contraseña *</label><input type="password" id="r-pass" placeholder="mínimo 6 caracteres"></div>
+      <div class="field"><label>Confirmar contraseña *</label><input type="password" id="r-pass2" placeholder="repite la contraseña"></div>
+      <button class="btn-primary" onclick="doRegister()">CREAR CUENTA</button>
+      <div class="err-msg" id="r-err"></div>
+      <div class="note">El ID de usuario es permanente y único. No podrá cambiarse.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app">
+  <div class="topbar">
+    <div class="logo">RANK</div>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="showPage('ranking',this)">Tabla</button>
+      <button class="nav-btn" onclick="showPage('profile',this)">Mi Perfil</button>
+      <button class="nav-btn admin-only" onclick="showPage('events',this)" style="display:none">Eventos</button>
+      <button class="nav-btn admin-only" onclick="showPage('admin',this)" style="display:none">Puntos</button>
+      <button class="nav-btn admin-only" onclick="showPage('mass',this)" style="display:none">Asig. Masiva</button>
+      <button class="nav-btn admin-only" onclick="showPage('seasons',this)" style="display:none">Temporadas</button>
+      <button class="nav-btn admin-only" onclick="showPage('users',this)" style="display:none">Usuarios</button>
+    </div>
+    <button class="notif-btn" onclick="toggleNotif()">🔔<span class="notif-badge" id="notif-badge"></span></button>
+    <div class="user-pill">@<span id="topbar-user">—</span></div>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
+
+  <!-- NOTIF PANEL -->
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-header">
+      <span>NOTIFICACIONES</span>
+      <button class="notif-mark" onclick="markAllRead()">Marcar leído</button>
+    </div>
+    <div class="notif-list" id="notif-list"></div>
+  </div>
+
+  <!-- RANKING -->
+  <div class="page active" id="page-ranking">
+    <div class="page-title">TABLA GENERAL</div>
+    <div class="page-desc">// actualizada en tiempo real · reporta el mismo día del evento</div>
+    <div id="season-pill-wrap"></div>
+    <div class="search-bar"><input type="text" id="rank-search" placeholder="Buscar jugador..." oninput="renderRanking()"></div>
+    <div class="user-table-wrapper">
+      <table>
+        <thead><tr><th>#</th><th>Jugador</th><th>Discord</th><th>Puntos</th></tr></thead>
+        <tbody id="rank-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="page" id="page-profile">
+    <div class="page-title">MI PERFIL</div>
+    <div class="page-desc">// tu progreso en la temporada actual</div>
+    <div class="profile-card">
+      <div class="profile-name" id="p-name">—</div>
+      <div class="profile-discord" id="p-discord">—</div>
+      <div class="profile-pts-big" id="p-pts">0</div>
+      <div class="profile-rank-txt">posición actual</div>
+      <div class="profile-rank-pos" id="p-pos">#—</div>
+      <div class="pts-scale">
+        <h4>Escala de puntos</h4>
+        <div class="scale-row"><span class="scale-pos">1°</span><span class="scale-pts">25 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">2°</span><span class="scale-pts">15 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">3°</span><span class="scale-pts">12 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">4°</span><span class="scale-pts">10 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">5° – 8°</span><span class="scale-pts">5 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">9° – 15°</span><span class="scale-pts">4 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">16° – 31°</span><span class="scale-pts">3 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">32° – 64°</span><span class="scale-pts">2 pts</span></div>
+        <div class="scale-row"><span class="scale-pos">65° – 128°</span><span class="scale-pts">1 pt</span></div>
+      </div>
+      <div class="pts-scale" style="margin-top:18px">
+        <h4>Historial de puntos</h4>
+        <div class="log-list" id="profile-log-list" style="max-height:300px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENTS -->
+  <div class="page" id="page-events">
+    <div class="page-title">EVENTOS</div>
+    <div class="page-desc">// crea eventos/torneos para reutilizarlos al asignar puntos</div>
+    <div class="two-col">
+      <div class="card">
+        <h3>CREAR EVENTO</h3>
+        <div class="field"><label>Nombre del evento *</label><input type="text" id="evt-name" placeholder="ej: Torneo Valorant Semana 3"></div>
+        <div class="field"><label>Juego / Categoría</label><input type="text" id="evt-game" placeholder="ej: Valorant, Chess, Custom"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="evt-date"></div>
+        <div class="field"><label>Notas (opcional)</label><textarea id="evt-notes" rows="2" placeholder="Descripción breve..." style="resize:vertical"></textarea></div>
+        <button class="btn-green" onclick="createEvent()" style="width:100%;margin-top:4px">+ CREAR EVENTO</button>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <h3>LISTA DE EVENTOS</h3>
+          <button class="btn-icon" onclick="toggleClosedEvents()" id="btn-toggle-closed">Ver cerrados</button>
+        </div>
+        <div id="events-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN POINTS -->
+  <div class="page" id="page-admin">
+    <div class="page-title">ASIGNAR PUNTOS</div>
+    <div class="page-desc">// busca jugador, elige evento y asigna puntos</div>
+    <div class="two-col">
+      <div class="card">
+        <h3>JUGADOR</h3>
+        <div class="field"><label>Buscar por nombre o ID</label><input type="text" id="admin-search" placeholder="Escribe para buscar..." oninput="adminSearch()"></div>
+        <div class="search-results" id="admin-results"></div>
+        <div class="pts-section" id="pts-section">
+          <div class="sel-user-card" id="sel-user-card"></div>
+          <div class="field"><label>Evento (opcional)</label><select id="admin-evt-sel"><option value="">— Sin evento (manual) —</option></select></div>
+          <div class="field"><label>Descripción / Razón *</label><input type="text" id="evt-desc" placeholder="ej: 1° lugar Torneo Valorant"></div>
+          <div class="field"><label>Puntos</label><input type="number" id="pts-val" min="1" placeholder="ej: 25"></div>
+          <div class="btn-row">
+            <button class="btn-add" onclick="applyPoints(1)">+ SUMAR</button>
+            <button class="btn-sub" onclick="applyPoints(-1)">− RESTAR</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <h3 id="log-card-title">LOG DE EVENTOS</h3>
+          <button id="btn-ver-todos" onclick="clearLogFilter()" style="display:none;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-size:10px;font-family:var(--mono)">Ver todos ×</button>
+        </div>
+        <div class="log-list" id="log-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MASS ASSIGN -->
+  <div class="page" id="page-mass">
+    <div class="page-title">ASIGNACIÓN MASIVA</div>
+    <div class="page-desc">// coloca jugadores por posición y distribuye puntos automáticamente con la escala</div>
+    <div class="two-col">
+      <div class="card">
+        <h3>CONFIGURAR TORNEO</h3>
+        <div class="field"><label>Evento (opcional)</label><select id="mass-evt-sel"><option value="">— Sin evento (manual) —</option></select></div>
+        <div class="field"><label>Descripción del torneo *</label><input type="text" id="mass-desc" placeholder="ej: Torneo Valorant — Final"></div>
+        <hr class="divider">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Agregar jugador por posición</div>
+        <div class="mass-search-wrap">
+          <input type="text" id="mass-search" style="width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;" placeholder="Buscar jugador para agregar..." oninput="massSearch()" autocomplete="off">
+          <div class="mass-dropdown" id="mass-dropdown"></div>
+        </div>
+        <div id="mass-list" style="margin-top:8px;margin-bottom:8px"></div>
+        <hr class="divider">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Distribución de puntos</div>
+          <div id="mass-scale-preview" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Agrega jugadores para ver</div>
+        </div>
+        <button class="btn-green" onclick="applyMass()" style="width:100%">⚡ APLICAR PUNTOS A TODOS</button>
+      </div>
+      <div class="card">
+        <h3>HISTORIAL MASIVO</h3>
+        <div class="log-list" id="mass-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEASONS -->
+  <div class="page" id="page-seasons">
+    <div class="page-title">TEMPORADAS</div>
+    <div class="page-desc">// inicia una nueva temporada y resetea los puntos de todos</div>
+    <div class="two-col">
+      <div class="card">
+        <h3>NUEVA TEMPORADA</h3>
+        <div class="field"><label>Nombre *</label><input type="text" id="sea-name" placeholder="ej: Temporada 2 — Verano 2026"></div>
+        <div class="field"><label>Descripción (opcional)</label><input type="text" id="sea-desc" placeholder="ej: Nuevas reglas, nuevo meta"></div>
+        <div class="warn-box">⚠️ Al iniciar una nueva temporada los puntos de <strong>todos</strong> los jugadores se resetearán a 0. El historial de logs se conserva con etiqueta de temporada.</div>
+        <button class="btn-green" onclick="startSeason()" style="width:100%">🏆 INICIAR NUEVA TEMPORADA</button>
+      </div>
+      <div class="card">
+        <h3>HISTORIAL DE TEMPORADAS</h3>
+        <div id="seasons-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="page" id="page-users">
+    <div class="page-title">USUARIOS</div>
+    <div class="page-desc">// gestión de cuentas registradas</div>
+    <div style="margin-bottom:10px">
+      <input type="text" id="users-search" placeholder="Buscar..." oninput="renderUsersTable()" style="padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;width:260px;">
+    </div>
+    <div class="user-table-wrapper">
+      <table>
+        <thead><tr><th>ID</th><th>Nombre</th><th>Discord</th><th>Puntos</th><th>Rol</th><th>Acciones</th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SEASON CONFIRM MODAL -->
+<div class="modal-overlay" id="season-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('season-modal')">✕</button>
+    <h3>CONFIRMAR RESET</h3>
+    <p style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">Esta acción reseteará los puntos de <strong style="color:var(--text)">todos</strong> los jugadores a 0. El historial de logs se conservará. Esta acción <span style="color:var(--accent2)">no se puede deshacer</span>.</p>
+    <p style="font-family:var(--mono);font-size:13px;margin-bottom:18px">Nueva temporada: <strong id="modal-sea-name" style="color:var(--accent)"></strong></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn-green" onclick="confirmSeason()" style="flex:1">Confirmar reset</button>
+      <button onclick="closeModal('season-modal')" style="flex:1;padding:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer;font-family:var(--body);font-weight:700;font-size:13px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  DATABASE
+// ══════════════════════════════════════
+const DB={
+  getUsers:   ()=>JSON.parse(localStorage.getItem('rs_users')||'[]'),
+  saveUsers:  u=>localStorage.setItem('rs_users',JSON.stringify(u)),
+  getLogs:    ()=>JSON.parse(localStorage.getItem('rs_logs')||'[]'),
+  saveLogs:   l=>localStorage.setItem('rs_logs',JSON.stringify(l)),
+  getEvents:  ()=>JSON.parse(localStorage.getItem('rs_events')||'[]'),
+  saveEvents: e=>localStorage.setItem('rs_events',JSON.stringify(e)),
+  getSeasons: ()=>JSON.parse(localStorage.getItem('rs_seasons')||'[]'),
+  saveSeasons:s=>localStorage.setItem('rs_seasons',JSON.stringify(s)),
+  getNotifs:  ()=>JSON.parse(localStorage.getItem('rs_notifs')||'[]'),
+  saveNotifs: n=>localStorage.setItem('rs_notifs',JSON.stringify(n)),
+  getSession: ()=>localStorage.getItem('rs_session'),
+  setSession: id=>localStorage.setItem('rs_session',id),
+  clearSession:()=>localStorage.removeItem('rs_session'),
+};
+
+// ── SEED 13 ADMINS ──
+(function init(){
+  const users=DB.getUsers();
+  const admins=[
+    {id:'admin1',name:'Admin 1',discord:'admin1#0001',password:'admin1pass'},
+    {id:'admin2',name:'Admin 2',discord:'admin2#0002',password:'admin2pass'},
+    {id:'admin3',name:'Admin 3',discord:'admin3#0003',password:'admin3pass'},
+    {id:'admin4',name:'Admin 4',discord:'admin4#0004',password:'admin4pass'},
+    {id:'admin5',name:'Admin 5',discord:'admin5#0005',password:'admin5pass'},
+    {id:'admin6',name:'Admin 6',discord:'admin6#0006',password:'admin6pass'},
+    {id:'admin7',name:'Admin 7',discord:'admin7#0007',password:'admin7pass'},
+    {id:'admin8',name:'Admin 8',discord:'admin8#0008',password:'admin8pass'},
+    {id:'admin9',name:'Admin 9',discord:'admin9#0009',password:'admin9pass'},
+    {id:'admin10',name:'Admin 10',discord:'admin10#0010',password:'admin10pass'},
+    {id:'admin11',name:'Admin 11',discord:'admin11#0011',password:'admin11pass'},
+    {id:'admin12',name:'Admin 12',discord:'admin12#0012',password:'admin12pass'},
+    {id:'admin13',name:'Admin 13',discord:'admin13#0013',password:'admin13pass'},
+  ];
+  let ch=false;
+  admins.forEach(a=>{if(!users.find(u=>u.id===a.id)){users.push({...a,points:0,role:'admin',created:new Date().toISOString()});ch=true;}});
+  if(ch)DB.saveUsers(users);
+  if(!DB.getSeasons().length) DB.saveSeasons([{id:'s1',name:'Temporada 1',desc:'Temporada inaugural',started:new Date().toISOString(),current:true}]);
+})();
+
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+let currentUser=null, selectedPlayer=null, massPlayers=[], showClosed=false, pendingSeason=null;
+
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+function switchTab(t){
+  document.getElementById('tab-login').style.display=t==='login'?'block':'none';
+  document.getElementById('tab-register').style.display=t==='register'?'block':'none';
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='register')));
+}
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideErr(id){document.getElementById(id).style.display='none';}
+
+function doLogin(){
+  hideErr('l-err');
+  const id=document.getElementById('l-id').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  if(!id||!pass){showErr('l-err','Completa todos los campos.');return;}
+  const user=DB.getUsers().find(u=>u.id===id&&u.password===pass);
+  if(!user){showErr('l-err','ID o contraseña incorrectos.');return;}
+  DB.setSession(user.id); bootApp(user);
+}
+
+function doRegister(){
+  hideErr('r-err');
+  const id=document.getElementById('r-id').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const name=document.getElementById('r-name').value.trim();
+  const discord=document.getElementById('r-discord').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const pass2=document.getElementById('r-pass2').value;
+  if(!id||!name||!discord||!pass||!pass2){showErr('r-err','Todos los campos son obligatorios.');return;}
+  if(id.length<3){showErr('r-err','El ID debe tener al menos 3 caracteres.');return;}
+  if(pass.length<6){showErr('r-err','La contraseña debe tener al menos 6 caracteres.');return;}
+  if(pass!==pass2){showErr('r-err','Las contraseñas no coinciden.');return;}
+  const users=DB.getUsers();
+  if(users.find(u=>u.id===id)){showErr('r-err','Ese ID ya está registrado. Elige otro.');return;}
+  if(users.find(u=>u.discord.toLowerCase()===discord.toLowerCase())){showErr('r-err','Ese Discord ya está registrado en otra cuenta.');return;}
+  const nu={id,name,discord,password:pass,points:0,role:'user',created:new Date().toISOString()};
+  users.push(nu); DB.saveUsers(users); DB.setSession(id); bootApp(nu);
+}
+
+function bootApp(user){
+  currentUser=user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('topbar-user').textContent=user.id;
+  if(user.role==='admin') document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');
+  renderRanking(); renderProfile(); renderLog(); renderNotifs(); populateEventSelects();
+}
+
+function doLogout(){
+  DB.clearSession(); currentUser=null;
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display='none');
+  ['l-id','l-pass'].forEach(id=>document.getElementById(id).value='');
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const sid=DB.getSession();
+  if(sid){const u=DB.getUsers().find(x=>x.id===sid);if(u)bootApp(u);}
+});
+
+// ══════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════
+function showPage(p,btn){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(btn) btn.classList.add('active');
+  closeNotif();
+  if(p==='ranking') renderRanking();
+  if(p==='profile') renderProfile();
+  if(p==='admin'){renderLog();adminSearch();populateEventSelects();}
+  if(p==='events') renderEventsList();
+  if(p==='mass'){renderMassList();renderMassLog();populateEventSelects();}
+  if(p==='seasons') renderSeasons();
+  if(p==='users') renderUsersTable();
+}
+
+// ══════════════════════════════════════
+//  RANKING
+// ══════════════════════════════════════
+function renderRanking(){
+  const season=DB.getSeasons().find(s=>s.current);
+  const wrap=document.getElementById('season-pill-wrap');
+  if(wrap&&season) wrap.innerHTML=`<div class="season-pill">🏆 ${esc(season.name)}</div>`;
+  const q=(document.getElementById('rank-search')?.value||'').toLowerCase();
+  const users=DB.getUsers().filter(u=>u.role!=='hidden').sort((a,b)=>b.points-a.points);
+  const filtered=q?users.filter(u=>u.name.toLowerCase().includes(q)||u.id.includes(q)):users;
+  const tbody=document.getElementById('rank-body');
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="4" class="no-results">Sin resultados.</td></tr>`;return;}
+  tbody.innerHTML=filtered.map(u=>{
+    const r=users.indexOf(u)+1;
+    const b=r===1?`<span class="rank-badge rank-1">1</span>`:r===2?`<span class="rank-badge rank-2">2</span>`:r===3?`<span class="rank-badge rank-3">3</span>`:`<span class="rank-badge rank-n">${r}</span>`;
+    return `<tr><td>${b}</td><td><strong>${esc(u.name)}</strong>${u.role==='admin'?' <span class="badge-admin">ADMIN</span>':''}</td><td class="discord-tag">${esc(u.discord)}</td><td class="pts">${u.points} pts</td></tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  PROFILE
+// ══════════════════════════════════════
+function renderProfile(){
+  if(!currentUser)return;
+  const u=DB.getUsers().find(x=>x.id===currentUser.id);
+  currentUser=u||currentUser;
+  const sorted=DB.getUsers().filter(x=>x.role!=='hidden').sort((a,b)=>b.points-a.points);
+  const pos=sorted.findIndex(x=>x.id===currentUser.id)+1;
+  document.getElementById('p-name').textContent=currentUser.name;
+  document.getElementById('p-discord').textContent=currentUser.discord;
+  document.getElementById('p-pts').textContent=currentUser.points;
+  document.getElementById('p-pos').textContent=pos>0?`#${pos}`:'—';
+  // history
+  const logs=DB.getLogs().filter(l=>l.playerId===currentUser.id);
+  const el=document.getElementById('profile-log-list');
+  const allUsers=DB.getUsers();
+  if(!logs.length){el.innerHTML='<div class="no-results" style="padding:14px">Sin movimientos aún.</div>';return;}
+  el.innerHTML=logs.slice(0,60).map(l=>{
+    const adminUser=allUsers.find(x=>x.id===l.admin);
+    const adminName=adminUser?adminUser.name:l.admin;
+    const evtTag=l.eventName?`<span style="color:var(--blue);font-size:10px">🎮 ${esc(l.eventName)} · </span>`:'';
+    return '<div class="log-item">'+
+      '<span class="'+(l.delta>0?'log-plus':'log-minus')+'" style="font-size:13px;font-weight:700">'+(l.delta>0?'+':'')+l.delta+' pts</span><br>'+
+      evtTag+'<span style="color:var(--text);font-size:12px">📋 '+esc(l.desc)+'</span><br>'+
+      '<span style="color:var(--muted);font-size:11px">👤 por <span style="color:var(--accent)">'+esc(adminName)+'</span> · '+fmtDate(new Date(l.date))+'</span>'+
+      '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  NOTIFICATIONS
+// ══════════════════════════════════════
+function getMyNotifs(){return currentUser?DB.getNotifs().filter(n=>n.userId===currentUser.id):[];}
+function renderNotifs(){
+  const notifs=getMyNotifs();
+  const unread=notifs.filter(n=>!n.read).length;
+  const badge=document.getElementById('notif-badge');
+  badge.textContent=unread>9?'9+':String(unread);
+  badge.classList.toggle('show',unread>0);
+  const list=document.getElementById('notif-list');
+  if(!notifs.length){list.innerHTML='<div class="notif-empty">Sin notificaciones.</div>';return;}
+  list.innerHTML=notifs.slice(0,30).map(n=>`
+    <div class="notif-item ${n.read?'':'unread'}">
+      <div class="ni-title">${esc(n.title)}</div>
+      <div class="ni-sub">${esc(n.body)} · ${fmtDate(new Date(n.date))}</div>
+    </div>`).join('');
+}
+function toggleNotif(){const p=document.getElementById('notif-panel');p.classList.toggle('open');if(p.classList.contains('open'))renderNotifs();}
+function closeNotif(){document.getElementById('notif-panel').classList.remove('open');}
+function markAllRead(){
+  const notifs=DB.getNotifs();
+  notifs.filter(n=>n.userId===currentUser.id).forEach(n=>n.read=true);
+  DB.saveNotifs(notifs);renderNotifs();
+}
+function pushNotif(userId,title,body){
+  const notifs=DB.getNotifs();
+  notifs.unshift({id:Date.now()+Math.random(),userId,title,body,date:new Date().toISOString(),read:false});
+  DB.saveNotifs(notifs);
+  if(currentUser&&currentUser.id===userId) renderNotifs();
+}
+document.addEventListener('click',e=>{
+  const panel=document.getElementById('notif-panel');
+  if(panel&&!panel.contains(e.target)&&!e.target.closest('.notif-btn')) closeNotif();
+});
+
+// ══════════════════════════════════════
+//  EVENTS
+// ══════════════════════════════════════
+function createEvent(){
+  const name=document.getElementById('evt-name').value.trim();
+  if(!name){showToast('El nombre del evento es obligatorio.','error');return;}
+  const game=document.getElementById('evt-game').value.trim();
+  const date=document.getElementById('evt-date').value;
+  const notes=document.getElementById('evt-notes').value.trim();
+  const events=DB.getEvents();
+  events.unshift({id:'e'+Date.now(),name,game,date,notes,status:'open',created:new Date().toISOString(),createdBy:currentUser.id});
+  DB.saveEvents(events);
+  ['evt-name','evt-game','evt-date','evt-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderEventsList();populateEventSelects();
+  showToast('Evento creado: '+name,'success');
+}
+function renderEventsList(){
+  const events=DB.getEvents().filter(e=>showClosed||e.status==='open');
+  const el=document.getElementById('events-list');
+  if(!events.length){el.innerHTML='<div class="no-results">'+(showClosed?'Sin eventos.':'Sin eventos activos.')+'</div>';return;}
+  el.innerHTML=events.map(e=>`
+    <div class="event-card ${e.status==='open'?'active-evt':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div class="evt-name">${esc(e.name)}</div>
+        <span class="${e.status==='open'?'evt-open':'evt-closed'}">${e.status==='open'?'● ABIERTO':'○ CERRADO'}</span>
+      </div>
+      ${e.game?`<div class="evt-game">🎮 ${esc(e.game)}</div>`:''}
+      <div class="evt-meta">${e.date?'📅 '+e.date:'Sin fecha'}${e.notes?' · '+esc(e.notes):''}</div>
+      <div style="display:flex;gap:5px;margin-top:8px">
+        ${e.status==='open'?`<button class="btn-icon" onclick="closeEvent('${e.id}')">Cerrar</button>`:''}
+        <button class="btn-danger" onclick="deleteEvent('${e.id}')">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+function closeEvent(id){
+  const events=DB.getEvents();const e=events.find(x=>x.id===id);
+  if(e)e.status='closed';DB.saveEvents(events);renderEventsList();populateEventSelects();showToast('Evento cerrado.','info');
+}
+function deleteEvent(id){
+  if(!confirm('¿Eliminar este evento?'))return;
+  DB.saveEvents(DB.getEvents().filter(e=>e.id!==id));renderEventsList();populateEventSelects();showToast('Eliminado.','success');
+}
+function toggleClosedEvents(){
+  showClosed=!showClosed;
+  document.getElementById('btn-toggle-closed').textContent=showClosed?'Ocultar cerrados':'Ver cerrados';
+  renderEventsList();
+}
+function populateEventSelects(){
+  const events=DB.getEvents().filter(e=>e.status==='open');
+  const opts='<option value="">— Sin evento (manual) —</option>'+events.map(e=>`<option value="${e.id}">${esc(e.name)}${e.date?' ('+e.date+')':''}</option>`).join('');
+  ['admin-evt-sel','mass-evt-sel'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+
+// ══════════════════════════════════════
+//  ADMIN — POINTS
+// ══════════════════════════════════════
+function adminSearch(){
+  const q=(document.getElementById('admin-search')?.value||'').toLowerCase();
+  const users=DB.getUsers();
+  const res=q?users.filter(u=>u.name.toLowerCase().includes(q)||u.id.includes(q)||u.discord.toLowerCase().includes(q)):[];
+  const el=document.getElementById('admin-results');
+  if(!res.length){el.innerHTML=q?'<div class="no-results">Sin resultados.</div>':'';return;}
+  el.innerHTML=res.slice(0,8).map(u=>`
+    <div class="result-item ${selectedPlayer&&selectedPlayer.id===u.id?'selected':''}" onclick="selectPlayer('${u.id}')">
+      <div><div class="result-name">${esc(u.name)}</div><div class="discord-tag">${esc(u.discord)}</div></div>
+      <div class="result-pts">${u.points} pts</div>
+    </div>`).join('');
+}
+function selectPlayer(id){
+  const users=DB.getUsers();
+  selectedPlayer=users.find(u=>u.id===id);
+  if(!selectedPlayer)return;
+  adminSearch();
+  document.getElementById('pts-section').classList.add('show');
+  document.getElementById('sel-user-card').innerHTML=
+    '<div class="sname">'+esc(selectedPlayer.name)+'</div>'+
+    '<div class="sinfo">'+esc(selectedPlayer.id)+' · '+esc(selectedPlayer.discord)+'</div>'+
+    '<div class="spts">'+selectedPlayer.points+'</div>'+
+    '<div style="font-family:var(--mono);font-size:10px;color:var(--muted)">puntos actuales</div>';
+  document.getElementById('log-card-title').textContent='HISTORIAL — '+selectedPlayer.name.toUpperCase();
+  document.getElementById('btn-ver-todos').style.display='block';
+  renderLog(selectedPlayer.id);
+}
+function clearLogFilter(){
+  selectedPlayer=null;
+  document.getElementById('pts-section').classList.remove('show');
+  document.getElementById('admin-search').value='';
+  document.getElementById('admin-results').innerHTML='';
+  document.getElementById('log-card-title').textContent='LOG DE EVENTOS';
+  document.getElementById('btn-ver-todos').style.display='none';
+  renderLog();
+}
+function applyPoints(sign){
+  if(!selectedPlayer){showToast('Selecciona un jugador primero.','error');return;}
+  const desc=document.getElementById('evt-desc').value.trim();
+  const val=parseInt(document.getElementById('pts-val').value);
+  if(!desc){showToast('Ingresa la descripción / razón.','error');return;}
+  if(!val||val<=0){showToast('Ingresa una cantidad válida.','error');return;}
+  const evtId=(document.getElementById('admin-evt-sel')||{}).value||'';
+  const evtObj=evtId?DB.getEvents().find(e=>e.id===evtId):null;
+  const users=DB.getUsers();
+  const u=users.find(x=>x.id===selectedPlayer.id);
+  const delta=sign*val;
+  u.points=Math.max(0,u.points+delta);
+  DB.saveUsers(users);
+  const logs=DB.getLogs();
+  logs.unshift({date:new Date().toISOString(),player:u.name,playerId:u.id,delta,desc,admin:currentUser.id,eventId:evtId,eventName:evtObj?evtObj.name:''});
+  DB.saveLogs(logs);
+  pushNotif(u.id,(delta>0?'⬆️ +'+delta:' ⬇️ '+delta)+' pts — '+u.name,(evtObj?'🎮 '+evtObj.name+' · ':'')+desc+' (por '+currentUser.name+')');
+  selectedPlayer=u;selectPlayer(u.id);renderRanking();
+  renderLog(selectedPlayer?selectedPlayer.id:undefined);
+  showToast((delta>0?'+':'')+delta+' pts → '+u.name,'success');
+  document.getElementById('pts-val').value='';
+}
+
+// ══════════════════════════════════════
+//  LOG
+// ══════════════════════════════════════
+function renderLog(filterPlayerId){
+  const allLogs=DB.getLogs();
+  const logs=filterPlayerId?allLogs.filter(l=>l.playerId===filterPlayerId):allLogs;
+  const el=document.getElementById('log-list');
+  if(!el)return;
+  if(!logs.length){el.innerHTML='<div class="no-results">Sin registros aún.</div>';return;}
+  const users=DB.getUsers();
+  el.innerHTML=logs.slice(0,100).map(l=>{
+    const adminUser=users.find(u=>u.id===l.admin);
+    const adminName=adminUser?adminUser.name:l.admin;
+    const evtTag=l.eventName?`<span style="color:var(--blue);font-size:10px">🎮 ${esc(l.eventName)}</span><br>`:'';
+    return '<div class="log-item">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">'+
+      '<strong style="font-size:12px">'+esc(l.player)+'</strong>'+
+      '<span class="'+(l.delta>0?'log-plus':'log-minus')+'" style="font-size:12px;font-weight:700">'+(l.delta>0?'+':'')+l.delta+' pts</span></div>'+
+      evtTag+
+      '<div style="color:var(--text);font-size:11px;margin-bottom:1px">📋 '+esc(l.desc)+'</div>'+
+      '<div style="color:var(--muted);font-size:10px">👤 <span style="color:var(--accent)">'+esc(adminName)+'</span> · '+fmtDate(new Date(l.date))+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  MASS ASSIGN
+// ══════════════════════════════════════
+const SCALE=[25,15,12,10,5,5,5,5,4,4,4,4,4,4,4,
+  3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+const getPts=pos=>pos<=0?0:(SCALE[pos-1]||0);
+
+function massSearch(){
+  const q=(document.getElementById('mass-search')?.value||'').toLowerCase();
+  const dd=document.getElementById('mass-dropdown');
+  if(!q){dd.classList.remove('open');return;}
+  const already=massPlayers.map(p=>p.userId);
+  const res=DB.getUsers().filter(u=>!already.includes(u.id)&&(u.name.toLowerCase().includes(q)||u.id.includes(q))).slice(0,8);
+  if(!res.length){dd.classList.remove('open');return;}
+  dd.innerHTML=res.map(u=>`<div class="mass-drop-item" onclick="addMassPlayer('${u.id}','${esc(u.name).replace(/'/g,"\\'")}')"><strong>${esc(u.name)}</strong> <span style="color:var(--muted);font-size:11px">${esc(u.discord)}</span></div>`).join('');
+  dd.classList.add('open');
+}
+function addMassPlayer(uid,name){
+  if(massPlayers.find(p=>p.userId===uid))return;
+  massPlayers.push({userId:uid,name});
+  document.getElementById('mass-search').value='';
+  document.getElementById('mass-dropdown').classList.remove('open');
+  renderMassList();updateScalePreview();
+}
+function removeMassPlayer(uid){
+  massPlayers=massPlayers.filter(p=>p.userId!==uid);
+  renderMassList();updateScalePreview();
+}
+function renderMassList(){
+  const el=document.getElementById('mass-list');
+  if(!massPlayers.length){el.innerHTML='<div class="no-results" style="padding:10px">Agrega jugadores en orden: 1°, 2°, 3°...</div>';return;}
+  el.innerHTML=massPlayers.map((p,i)=>{
+    const cls=i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'';
+    return `<div class="mass-row ${cls}"><div class="mass-pos">${i+1}°</div><div class="mass-name">${esc(p.name)}</div><div class="mass-pts-badge">+${getPts(i+1)}</div><button class="mass-remove" onclick="removeMassPlayer('${p.userId}')">×</button></div>`;
+  }).join('');
+}
+function updateScalePreview(){
+  const el=document.getElementById('mass-scale-preview');
+  if(!massPlayers.length){el.textContent='Agrega jugadores para ver';return;}
+  el.innerHTML=massPlayers.map((p,i)=>`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><span>${i+1}° ${esc(p.name)}</span><span class="log-plus">+${getPts(i+1)} pts</span></div>`).join('');
+}
+function applyMass(){
+  const desc=document.getElementById('mass-desc').value.trim();
+  if(!desc){showToast('Ingresa la descripción del torneo.','error');return;}
+  if(!massPlayers.length){showToast('Agrega al menos un jugador.','error');return;}
+  const evtId=(document.getElementById('mass-evt-sel')||{}).value||'';
+  const evtObj=evtId?DB.getEvents().find(e=>e.id===evtId):null;
+  if(!confirm(`¿Aplicar puntos a ${massPlayers.length} jugador(es)?\n${evtObj?'Evento: '+evtObj.name+'\n':''}Torneo: ${desc}`))return;
+  const users=DB.getUsers(), logs=DB.getLogs();
+  const batchId='batch_'+Date.now();
+  massPlayers.forEach((p,i)=>{
+    const pts=getPts(i+1);if(pts<=0)return;
+    const u=users.find(x=>x.id===p.userId);if(!u)return;
+    u.points+=pts;
+    logs.unshift({date:new Date().toISOString(),player:u.name,playerId:u.id,delta:pts,desc:`${i+1}° lugar — ${desc}`,admin:currentUser.id,eventId:evtId,eventName:evtObj?evtObj.name:'',batchId});
+    pushNotif(u.id,`⬆️ +${pts} pts — ${i+1}° lugar`,(evtObj?'🎮 '+evtObj.name+' · ':'')+desc+' (por '+currentUser.name+')');
+  });
+  DB.saveUsers(users);DB.saveLogs(logs);
+  massPlayers=[];
+  document.getElementById('mass-desc').value='';
+  renderMassList();updateScalePreview();renderMassLog();renderRanking();
+  showToast('✅ Puntos aplicados a todos los jugadores.','success');
+}
+function renderMassLog(){
+  const el=document.getElementById('mass-log');
+  if(!el)return;
+  const logs=DB.getLogs().filter(l=>l.batchId);
+  if(!logs.length){el.innerHTML='<div class="no-results">Sin asignaciones masivas aún.</div>';return;}
+  const batches={};
+  logs.forEach(l=>{if(!batches[l.batchId])batches[l.batchId]=[];batches[l.batchId].push(l);});
+  const users=DB.getUsers();
+  el.innerHTML=Object.entries(batches).slice(0,20).map(([bid,entries])=>{
+    const first=entries[0];
+    const adminUser=users.find(u=>u.id===first.admin);
+    return '<div class="log-item">'+
+      '<div style="font-weight:700;font-size:12px;margin-bottom:3px">⚡ '+esc(desc_from(first.desc))+'</div>'+
+      (first.eventName?'<div style="color:var(--blue);font-size:10px;margin-bottom:3px">🎮 '+esc(first.eventName)+'</div>':'')+
+      entries.map(e=>`<div style="font-size:11px;color:var(--muted)">${esc(e.player)} → <span class="log-plus">+${e.delta}</span></div>`).join('')+
+      '<div style="color:var(--muted);font-size:10px;margin-top:3px">👤 <span style="color:var(--accent)">'+(adminUser?esc(adminUser.name):esc(first.admin))+'</span> · '+fmtDate(new Date(first.date))+'</div>'+
+      '</div>';
+  }).join('');
+}
+function desc_from(d){const m=d.match(/— (.+)$/);return m?m[1]:d;}
+
+// ══════════════════════════════════════
+//  SEASONS
+// ══════════════════════════════════════
+function startSeason(){
+  const name=document.getElementById('sea-name').value.trim();
+  if(!name){showToast('El nombre es obligatorio.','error');return;}
+  pendingSeason={name,desc:document.getElementById('sea-desc').value.trim()};
+  document.getElementById('modal-sea-name').textContent=name;
+  document.getElementById('season-modal').classList.add('open');
+}
+function confirmSeason(){
+  if(!pendingSeason)return;
+  const seasons=DB.getSeasons();
+  seasons.forEach(s=>s.current=false);
+  seasons.unshift({id:'s'+Date.now(),name:pendingSeason.name,desc:pendingSeason.desc,started:new Date().toISOString(),current:true});
+  DB.saveSeasons(seasons);
+  const users=DB.getUsers();users.forEach(u=>u.points=0);DB.saveUsers(users);
+  closeModal('season-modal');pendingSeason=null;
+  document.getElementById('sea-name').value='';document.getElementById('sea-desc').value='';
+  renderSeasons();renderRanking();renderProfile();
+  showToast('🏆 Nueva temporada iniciada. Puntos reseteados.','success');
+}
+function renderSeasons(){
+  const seasons=DB.getSeasons();
+  const el=document.getElementById('seasons-list');
+  if(!seasons.length){el.innerHTML='<div class="no-results">Sin temporadas.</div>';return;}
+  el.innerHTML=seasons.map(s=>`
+    <div class="season-card ${s.current?'season-current':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="season-name">${esc(s.name)}</div>
+        ${s.current?'<span class="badge-current">ACTUAL</span>':''}
+      </div>
+      ${s.desc?`<div class="season-meta">${esc(s.desc)}</div>`:''}
+      <div class="season-meta">📅 ${fmtDate(new Date(s.started))}</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  USERS
+// ══════════════════════════════════════
+function renderUsersTable(){
+  const q=(document.getElementById('users-search')?.value||'').toLowerCase();
+  const users=DB.getUsers().filter(u=>!q||(u.id+u.name+u.discord).toLowerCase().includes(q));
+  const tbody=document.getElementById('users-body');
+  if(!users.length){tbody.innerHTML=`<tr><td colspan="6" class="no-results">Sin usuarios.</td></tr>`;return;}
+  tbody.innerHTML=users.map(u=>`<tr>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(u.id)}</td>
+    <td><strong>${esc(u.name)}</strong></td>
+    <td class="discord-tag">${esc(u.discord)}</td>
+    <td class="pts">${u.points}</td>
+    <td>${u.role==='admin'?'<span class="badge-admin">ADMIN</span>':'user'}</td>
+    <td style="display:flex;gap:5px">
+      <button class="btn-sm" onclick="toggleAdmin('${u.id}')">${u.role==='admin'?'→ User':'→ Admin'}</button>
+      <button class="btn-danger" onclick="deleteUser('${u.id}')">Eliminar</button>
+    </td></tr>`).join('');
+}
+function toggleAdmin(id){
+  if(!confirm('¿Cambiar rol?'))return;
+  const users=DB.getUsers();const u=users.find(x=>x.id===id);if(!u)return;
+  u.role=u.role==='admin'?'user':'admin';DB.saveUsers(users);renderUsersTable();showToast('Rol actualizado.','success');
+}
+function deleteUser(id){
+  if(id===currentUser.id){showToast('No puedes eliminar tu propia cuenta.','error');return;}
+  if(!confirm('¿Eliminar este usuario?'))return;
+  DB.saveUsers(DB.getUsers().filter(u=>u.id!==id));renderUsersTable();renderRanking();showToast('Usuario eliminado.','success');
+}
+
+// ══════════════════════════════════════
+//  MODAL + UTILS
+// ══════════════════════════════════════
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function esc(s){const d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML;}
+function fmtDate(d){return d.toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});}
+let toastTimer;
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast show ${type}`;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
